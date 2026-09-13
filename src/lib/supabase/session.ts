@@ -4,7 +4,16 @@ import { createServerClient } from "@supabase/ssr";
 import { env, isPreviewMode } from "@/lib/env";
 
 /** Routes a signed-out visitor is allowed to see. Everything else needs a session. */
-const PUBLIC_ROUTES = ["/", "/login", "/signup", "/check-email", "/auth"];
+const PUBLIC_ROUTES = [
+  "/",
+  "/login",
+  "/signup",
+  "/check-email",
+  "/forgot-password",
+  "/auth",
+];
+// Note: /reset-password is deliberately NOT public. The recovery link signs the
+// user in first, so by the time they land there they have a session.
 
 function isPublic(pathname: string) {
   return PUBLIC_ROUTES.some(

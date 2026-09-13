@@ -31,3 +31,21 @@ export function validateName(value: string): string | null {
   if (name.length > 60) return "That's a little long — 60 characters or fewer.";
   return null;
 }
+
+/**
+ * Narrows a browser-supplied IANA timezone to one the runtime actually knows,
+ * falling back to UTC.
+ *
+ * The value arrives in a hidden form field, so it is user-controlled and has to
+ * be checked before it reaches the database.
+ */
+export function normalizeTimezone(value: unknown): string {
+  if (typeof value !== "string" || !value) return "UTC";
+
+  try {
+    new Intl.DateTimeFormat("en-US", { timeZone: value });
+    return value;
+  } catch {
+    return "UTC";
+  }
+}

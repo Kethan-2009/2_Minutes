@@ -15,6 +15,24 @@ export function SignUpForm() {
 
   return (
     <form action={formAction} className="flex flex-col gap-6" noValidate>
+      {/*
+        The browser is the only thing that knows where the user is, and the
+        server renders as UTC — so this is filled in on mount via a ref rather
+        than through state, which would either mismatch on hydration or cause a
+        second render for a value nobody looks at.
+      */}
+      <input
+        type="hidden"
+        name="timezone"
+        ref={(node) => {
+          if (!node) return;
+          try {
+            node.value = Intl.DateTimeFormat().resolvedOptions().timeZone ?? "";
+          } catch {
+            // Leave it empty; the server falls back to UTC.
+          }
+        }}
+      />
       <div className="flex flex-col gap-5">
         <TextField
           label="First name"
@@ -22,8 +40,7 @@ export function SignUpForm() {
           autoComplete="given-name"
           defaultValue={state.values.name}
           placeholder="Alex"
-          hint={state.fieldErrors.name}
-          aria-invalid={Boolean(state.fieldErrors.name)}
+          error={state.fieldErrors.name}
           required
         />
         <TextField
@@ -34,8 +51,7 @@ export function SignUpForm() {
           autoComplete="email"
           defaultValue={state.values.email}
           placeholder="you@school.edu"
-          hint={state.fieldErrors.email}
-          aria-invalid={Boolean(state.fieldErrors.email)}
+          error={state.fieldErrors.email}
           required
         />
         <TextField
@@ -44,8 +60,8 @@ export function SignUpForm() {
           type="password"
           autoComplete="new-password"
           placeholder="••••••••"
-          hint={state.fieldErrors.password ?? `At least ${PASSWORD_MIN_LENGTH} characters.`}
-          aria-invalid={Boolean(state.fieldErrors.password)}
+          hint={`At least ${PASSWORD_MIN_LENGTH} characters.`}
+          error={state.fieldErrors.password}
           required
         />
       </div>

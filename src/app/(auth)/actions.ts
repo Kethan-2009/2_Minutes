@@ -6,10 +6,13 @@ import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { env, supabaseConfigured } from "@/lib/env";
 import {
+  normalizeTimezone,
   validateEmail,
   validateName,
   validatePassword,
 } from "@/lib/validation";
+import { humanizeAuthError } from "@/lib/auth-errors";
+import { safeRedirect } from "@/lib/safe-redirect";
 import type { AuthFormState } from "./form-state";
 
 /**
@@ -18,38 +21,6 @@ import type { AuthFormState } from "./form-state";
  */
 const NOT_CONNECTED =
   "Supabase isn't connected yet, so accounts can't be created. Add NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY to .env.local, then restart the dev server. See README.md.";
-
-/**
- * Supabase error strings are written for developers. These are written for a
- * tired student at 11pm who just wants to get in.
- */
-function humanize(message: string): string {
-  const normalized = message.toLowerCase();
-
-  if (normalized.includes("invalid login credentials")) {
-    return "That email and password don't match. Give it another go.";
-  }
-  if (normalized.includes("email not confirmed")) {
-    return "Confirm your email first — check your inbox for the link.";
-  }
-  if (normalized.includes("already registered") || normalized.includes("already been registered")) {
-    return "There's already an account with that email. Log in instead.";
-  }
-  if (normalized.includes("rate limit") || normalized.includes("too many")) {
-    return "Too many tries in a row. Wait a minute, then try again.";
-  }
-  if (normalized.includes("password")) {
-    return message;
-  }
-  return "Something went wrong on our end. Try again in a moment.";
-}
-
-/** Only allow same-origin relative paths, so ?next= can't be used to phish. */
-function safeRedirect(next: string | null): string {
-  if (!next) return "/today";
-  if (!next.startsWith("/") || next.startsWith("//")) return "/today";
-  return next;
-}
 
 export async function signUp(
   _prevState: AuthFormState,
@@ -73,19 +44,22 @@ export async function signUp(
     return { error: NOT_CONNECTED, fieldErrors: {}, values: { name, email } };
   }
 
+  const timezone = normalizeTimezone(formData.get("timezone"));
+
   const supabase = await createClient();
   const { data, error } = await supabase.auth.signUp({
     email,
     password,
     options: {
-      data: { display_name: name.trim() },
+      // Read by the handle_new_user trigger to seed the profile row.
+      data: { display_name: name.trim(), timezone },
       emailRedirectTo: `${env.siteUrl}/auth/confirm`,
     },
   });
 
   if (error) {
     return {
-      error: humanize(error.message),
+      error: humanizeAuthError(error.message),
       fieldErrors: {},
       values: { name, email },
     };
@@ -107,7 +81,7 @@ export async function signIn(
 ): Promise<AuthFormState> {
   const email = String(formData.get("email") ?? "").trim();
   const password = String(formData.get("password") ?? "");
-  const next = safeRedirect(formData.get("next") ? String(formData.get("next")) : null);
+  const next = safeRedirect(formData.get("next")?.toString());
 
   const fieldErrors = {
     email: validateEmail(email) ?? undefined,
@@ -126,7 +100,7 @@ export async function signIn(
   const { error } = await supabase.auth.signInWithPassword({ email, password });
 
   if (error) {
-    return { error: humanize(error.message), fieldErrors: {}, values: { email } };
+    return { error: humanizeAuthError(error.message), fieldErrors: {}, values: { email } };
   }
 
   revalidatePath("/", "layout");
@@ -140,4 +114,74 @@ export async function signOut() {
   await supabase.auth.signOut();
   revalidatePath("/", "layout");
   redirect("/login");
+}
+
+/**
+ * Sends a password reset link.
+ *
+ * The response is identical whether or not the email has an account — telling a
+ * stranger which addresses are registered is a gift to whoever is asking.
+ */
+export async function requestPasswordReset(
+  _prevState: AuthFormState,
+  formData: FormData,
+): Promise<AuthFormState> {
+  const email = String(formData.get("email") ?? "").trim();
+
+  const emailError = validateEmail(email);
+  if (emailError) {
+    return { error: null, fieldErrors: { email: emailError }, values: { email } };
+  }
+
+  if (!supabaseConfigured) {
+    return { error: NOT_CONNECTED, fieldErrors: {}, values: { email } };
+  }
+
+  const supabase = await createClient();
+  const { error } = await supabase.auth.resetPasswordForEmail(email, {
+    redirectTo: `${env.siteUrl}/auth/confirm?next=/reset-password`,
+  });
+
+  // A rate limit is worth surfacing; anything else is swallowed on purpose so
+  // the outcome cannot be used to probe for registered addresses.
+  if (error && /rate limit|too many/i.test(error.message)) {
+    return { error: humanizeAuthError(error.message), fieldErrors: {}, values: { email } };
+  }
+
+  return { error: null, done: true, fieldErrors: {}, values: { email } };
+}
+
+/** Sets a new password for the signed-in user, at the end of a recovery link. */
+export async function updatePassword(
+  _prevState: AuthFormState,
+  formData: FormData,
+): Promise<AuthFormState> {
+  const password = String(formData.get("password") ?? "");
+  const confirmPassword = String(formData.get("confirmPassword") ?? "");
+
+  const fieldErrors = {
+    password: validatePassword(password) ?? undefined,
+    confirmPassword:
+      password && confirmPassword !== password
+        ? "Those two don't match."
+        : undefined,
+  };
+
+  if (fieldErrors.password || fieldErrors.confirmPassword) {
+    return { error: null, fieldErrors, values: {} };
+  }
+
+  if (!supabaseConfigured) {
+    return { error: NOT_CONNECTED, fieldErrors: {}, values: {} };
+  }
+
+  const supabase = await createClient();
+  const { error } = await supabase.auth.updateUser({ password });
+
+  if (error) {
+    return { error: humanizeAuthError(error.message), fieldErrors: {}, values: {} };
+  }
+
+  revalidatePath("/", "layout");
+  redirect("/today");
 }

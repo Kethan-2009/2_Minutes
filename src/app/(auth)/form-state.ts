@@ -6,10 +6,13 @@
  */
 export type AuthFormState = {
   error: string | null;
+  /** Set when the action succeeded but stays on the page (e.g. "email sent"). */
+  done?: boolean;
   fieldErrors: {
     name?: string;
     email?: string;
     password?: string;
+    confirmPassword?: string;
   };
   /** Echoed back so a failed submit does not wipe what was typed. */
   values: {

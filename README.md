@@ -14,9 +14,13 @@ Built so far:
 
 - **Project setup** — Next.js 16 (App Router), TypeScript, Tailwind v4, Vercel-ready
 - **Supabase auth** — email + password, cookie sessions, refresh in the proxy
-- **Sign up / log in / confirm email** — with route protection
+- **Sign up / log in / confirm email / password reset** — with route protection
 - **Preview mode** — the UI runs with no Supabase project attached, in dev only
-- **Database schema** — goals, commitments, check-ins, pivots, all under row level security
+- **Database schema** — goals, commitments, check-ins, pivots, all under row
+  level security, with TypeScript types that match
+- **Error and not-found pages** — styled, rather than Next's defaults
+- **Tests** — 28 unit, 28 end-to-end across mobile and desktop
+- **CI** — typecheck, lint, unit tests, build and E2E on every push
 
 Not built yet: onboarding, goal setup, the daily check-in, pivot detection,
 the dashboard, the widget, notifications.
@@ -58,16 +62,19 @@ Preview mode is for looking at the interface. To actually create an account:
 
 **1. Create a Supabase project** at [supabase.com](https://supabase.com).
 
-**2. Run the migration.** In the Supabase dashboard, open the SQL Editor and
-run the contents of [`supabase/migrations/0001_init.sql`](supabase/migrations/0001_init.sql).
-It creates every table, the row level security policies, and the trigger that
-gives each new auth user a profile.
+**2. Run the migrations.** In the Supabase dashboard, open the SQL Editor and
+run each file in [`supabase/migrations/`](supabase/migrations/) **in filename
+order**. They create every table, the row level security policies, and the
+trigger that gives each new auth user a profile.
 
 **3. Point auth at the app.** In Supabase → Authentication → URL Configuration:
 
 - Site URL: `http://localhost:2000`
 - Redirect URLs: add `http://localhost:2000/auth/confirm` and
   `http://localhost:2000/auth/callback`
+
+Password reset uses the same `/auth/confirm` route with `?next=/reset-password`,
+so no extra entry is needed.
 
 **4. Set your environment.**
 
@@ -101,7 +108,29 @@ keys are absent. It is not a fallback that can follow you to production:
 ```bash
 npm run typecheck   # tsc --noEmit
 npm run lint        # eslint
+npm test            # vitest — pure logic
+npm run test:e2e    # playwright — real browser, mobile + desktop
 npm run build       # production build
+```
+
+All of these run in CI on every push (`.github/workflows/ci.yml`).
+
+**Unit tests** cover the parts where a quiet mistake is expensive: `safeRedirect`
+(an open redirect in the login form), `humanizeAuthError` (leaking an internal
+error, or confirming which emails are registered), and form validation.
+
+**End-to-end tests** run against preview mode, so they need no Supabase project
+and no secrets — which is what lets them run on every pull request. They cover
+routing, the not-found page, field-level error semantics, and that a submit in
+preview mode names the missing keys. Flows needing a real session (logging in,
+completing a password reset) are not covered and would need a test project.
+
+Playwright normally uses the Chromium it downloads with
+`npx playwright install chromium`. If your environment already has one, point at
+it instead:
+
+```bash
+PLAYWRIGHT_CHROMIUM_PATH=/path/to/chrome npm run test:e2e
 ```
 
 ---
@@ -111,14 +140,17 @@ npm run build       # production build
 ```
 src/
   app/
-    (auth)/            sign up, log in, check email — one shared shell
-      actions.ts       server actions: signUp, signIn, signOut
+    (auth)/            sign up, log in, reset password — one shared shell
+      actions.ts       server actions for every auth transition
       form-state.ts    shared form state shape
     auth/
       confirm/         email confirmation link lands here
       callback/        PKCE code exchange (magic links, future OAuth)
     today/             morning entry point (placeholder for now)
     page.tsx           landing — redirects to /today when signed in
+    error.tsx          segment error boundary
+    global-error.tsx   root failure; renders its own document
+    not-found.tsx      404
   components/
     ui/                button, text field, submit button, form error
     setup-banner.tsx   preview-mode notice, dev only
@@ -126,11 +158,17 @@ src/
   lib/
     env.ts             env vars + preview-mode detection
     validation.ts      shared form validation
+    safe-redirect.ts   narrows ?next= to a same-origin path
+    auth-errors.ts     Supabase error strings → plain English
     supabase/
       client.ts        browser client
       server.ts        server components, actions, route handlers
       session.ts       session refresh + route gating
+      database.types.ts  schema types (hand-maintained — see the file)
   proxy.ts             runs on every request (Next 16's middleware)
+tests/
+  unit/                vitest
+  e2e/                 playwright
 supabase/migrations/   SQL, run in order
 ```
 

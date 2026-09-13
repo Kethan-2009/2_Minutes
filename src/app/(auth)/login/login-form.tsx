@@ -25,8 +25,7 @@ export function LoginForm({ next }: { next?: string }) {
           autoComplete="email"
           defaultValue={state.values.email}
           placeholder="you@school.edu"
-          hint={state.fieldErrors.email}
-          aria-invalid={Boolean(state.fieldErrors.email)}
+          error={state.fieldErrors.email}
           required
         />
         <TextField
@@ -35,8 +34,7 @@ export function LoginForm({ next }: { next?: string }) {
           type="password"
           autoComplete="current-password"
           placeholder="••••••••"
-          hint={state.fieldErrors.password}
-          aria-invalid={Boolean(state.fieldErrors.password)}
+          error={state.fieldErrors.password}
           required
         />
       </div>
@@ -44,6 +42,15 @@ export function LoginForm({ next }: { next?: string }) {
       <FormError message={state.error} />
 
       <SubmitButton pendingLabel="Logging you in…">Log in</SubmitButton>
+
+      <p className="text-center text-[15px]">
+        <Link
+          href="/forgot-password"
+          className="text-muted underline underline-offset-4 hover:text-ink"
+        >
+          Forgot your password?
+        </Link>
+      </p>
 
       <p className="text-center text-[15px] text-muted">
         No account yet?{" "}
