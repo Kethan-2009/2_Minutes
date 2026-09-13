@@ -3,15 +3,18 @@ import { redirect } from "next/navigation";
 import { ButtonLink } from "@/components/ui/button";
 import { Wordmark } from "@/components/wordmark";
 import { createClient } from "@/lib/supabase/server";
+import { isPreviewMode } from "@/lib/env";
 
 export default async function HomePage() {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  if (!isPreviewMode) {
+    const supabase = await createClient();
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
 
-  // Signed in? There is nothing to sell you. Go straight to today.
-  if (user) redirect("/today");
+    // Signed in? There is nothing to sell you. Go straight to today.
+    if (user) redirect("/today");
+  }
 
   return (
     <div className="flex min-h-dvh flex-col">

@@ -4,6 +4,7 @@ import { redirect } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Wordmark } from "@/components/wordmark";
 import { createClient } from "@/lib/supabase/server";
+import { isPreviewMode } from "@/lib/env";
 import { signOut } from "@/app/(auth)/actions";
 
 export const metadata: Metadata = {
@@ -15,17 +16,23 @@ export const metadata: Metadata = {
  * For now it exists to prove the session survives the round trip.
  */
 export default async function TodayPage() {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  // In preview mode there is no session to read, so show the screen with a
+  // placeholder name. The banner above makes clear nothing here is real.
+  let name = "there";
 
-  if (!user) redirect("/login");
+  if (!isPreviewMode) {
+    const supabase = await createClient();
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
 
-  const name =
-    (user.user_metadata?.display_name as string | undefined) ??
-    user.email?.split("@")[0] ??
-    "there";
+    if (!user) redirect("/login");
+
+    name =
+      (user.user_metadata?.display_name as string | undefined) ??
+      user.email?.split("@")[0] ??
+      "there";
+  }
 
   const today = new Date().toLocaleDateString("en-US", {
     weekday: "long",

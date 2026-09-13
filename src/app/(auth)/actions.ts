@@ -4,13 +4,20 @@ import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 
 import { createClient } from "@/lib/supabase/server";
-import { env } from "@/lib/env";
+import { env, supabaseConfigured } from "@/lib/env";
 import {
   validateEmail,
   validateName,
   validatePassword,
 } from "@/lib/validation";
 import type { AuthFormState } from "./form-state";
+
+/**
+ * Preview mode has no database to write to. Say so in the form, in plain terms,
+ * rather than letting the button appear to do nothing.
+ */
+const NOT_CONNECTED =
+  "Supabase isn't connected yet, so accounts can't be created. Add NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY to .env.local, then restart the dev server. See README.md.";
 
 /**
  * Supabase error strings are written for developers. These are written for a
@@ -62,6 +69,10 @@ export async function signUp(
     return { error: null, fieldErrors, values: { name, email } };
   }
 
+  if (!supabaseConfigured) {
+    return { error: NOT_CONNECTED, fieldErrors: {}, values: { name, email } };
+  }
+
   const supabase = await createClient();
   const { data, error } = await supabase.auth.signUp({
     email,
@@ -107,6 +118,10 @@ export async function signIn(
     return { error: null, fieldErrors, values: { email } };
   }
 
+  if (!supabaseConfigured) {
+    return { error: NOT_CONNECTED, fieldErrors: {}, values: { email } };
+  }
+
   const supabase = await createClient();
   const { error } = await supabase.auth.signInWithPassword({ email, password });
 
@@ -119,6 +134,8 @@ export async function signIn(
 }
 
 export async function signOut() {
+  if (!supabaseConfigured) redirect("/login");
+
   const supabase = await createClient();
   await supabase.auth.signOut();
   revalidatePath("/", "layout");

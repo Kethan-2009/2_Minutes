@@ -1,7 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { createServerClient } from "@supabase/ssr";
 
-import { env } from "@/lib/env";
+import { env, isPreviewMode } from "@/lib/env";
 
 /** Routes a signed-out visitor is allowed to see. Everything else needs a session. */
 const PUBLIC_ROUTES = ["/", "/login", "/signup", "/check-email", "/auth"];
@@ -20,6 +20,12 @@ function isPublic(pathname: string) {
  * session and signs people out at random.
  */
 export async function updateSession(request: NextRequest) {
+  // Preview mode (dev, no Supabase project): there is no session to refresh and
+  // nothing to protect, so let every route through and let the pages say so.
+  if (isPreviewMode) {
+    return NextResponse.next({ request });
+  }
+
   let response = NextResponse.next({ request });
 
   const supabase = createServerClient(env.supabaseUrl, env.supabaseAnonKey, {

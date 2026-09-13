@@ -13,8 +13,9 @@ said last week and won't let you quietly drift.
 Built so far:
 
 - **Project setup** — Next.js 16 (App Router), TypeScript, Tailwind v4, Vercel-ready
-- **Supabase auth** — email + password, cookie sessions, refresh in middleware
+- **Supabase auth** — email + password, cookie sessions, refresh in the proxy
 - **Sign up / log in / confirm email** — with route protection
+- **Preview mode** — the UI runs with no Supabase project attached, in dev only
 - **Database schema** — goals, commitments, check-ins, pivots, all under row level security
 
 Not built yet: onboarding, goal setup, the daily check-in, pivot detection,
@@ -23,6 +24,37 @@ the dashboard, the widget, notifications.
 ---
 
 ## Running it locally
+
+You need Node 20+ (`node -v`) and the repo on your machine:
+
+```bash
+git clone https://github.com/Kethan-2009/2_Minutes.git
+cd 2_Minutes
+git checkout Pilot
+npm install
+npm run dev
+```
+
+Open [localhost:2000](http://localhost:2000).
+
+That works with no configuration at all — the app starts in **preview mode**
+and you can click through every screen. Sign up and log in won't do anything
+yet; a black banner at the top says so, and submitting a form tells you exactly
+which keys are missing.
+
+> **Why 2000 and not 3000?** Port 3000 is where every other JS project in the
+> world also lives, which means stale service workers and half-forgotten dev
+> servers from old projects. A dedicated port gives this app its own browser
+> origin and a clean slate. It's set in the `dev` and `start` scripts — change
+> the `-p` flag there if you want something else, and update
+> `NEXT_PUBLIC_SITE_URL` plus the Supabase redirect URLs to match.
+>
+> Note that `PORT` cannot be set in `.env` — the HTTP server boots before env
+> files are read.
+
+### Connecting Supabase
+
+Preview mode is for looking at the interface. To actually create an account:
 
 **1. Create a Supabase project** at [supabase.com](https://supabase.com).
 
@@ -40,34 +72,29 @@ gives each new auth user a profile.
 **4. Set your environment.**
 
 ```bash
-cp .env.example .env.local
+cp .env.example .env.local        # Windows: copy .env.example .env.local
 ```
 
 Fill in `NEXT_PUBLIC_SUPABASE_URL` and `NEXT_PUBLIC_SUPABASE_ANON_KEY` from
-Supabase → Project Settings → API.
-
-**5. Go.**
-
-```bash
-npm install
-npm run dev
-```
-
-Open [localhost:2000](http://localhost:2000).
-
-> **Why 2000 and not 3000?** Port 3000 is where every other JS project in the
-> world also lives, which means stale service workers and half-forgotten dev
-> servers from old projects. A dedicated port gives this app its own browser
-> origin and a clean slate. It's set in the `dev` and `start` scripts — change
-> the `-p` flag there if you want something else, and update
-> `NEXT_PUBLIC_SITE_URL` plus the Supabase redirect URLs to match.
->
-> Note that `PORT` cannot be set in `.env` — the HTTP server boots before env
-> files are read.
+Supabase → Project Settings → API, then **restart the dev server**. The banner
+disappears and auth works.
 
 > If email confirmation is on (the Supabase default), signing up sends you to
 > `/check-email` instead of straight into the app. To skip that while building,
 > turn off "Confirm email" in Authentication → Sign In / Providers.
+
+### Preview mode, precisely
+
+Preview mode engages **only** when `NODE_ENV` is `development` and the Supabase
+keys are absent. It is not a fallback that can follow you to production:
+
+- `next build` **refuses to run** in production without both keys (see
+  `next.config.ts`), so a missing variable fails the deploy rather than 500ing
+  on first request.
+- In preview mode the proxy skips session handling, the pages that read a
+  session use a placeholder, and both auth actions return a message naming the
+  missing variables.
+- Form validation still runs, so that part of the UI is real.
 
 ### Checks
 
@@ -92,9 +119,12 @@ src/
       callback/        PKCE code exchange (magic links, future OAuth)
     today/             morning entry point (placeholder for now)
     page.tsx           landing — redirects to /today when signed in
-  components/ui/       button, text field, submit button, form error
+  components/
+    ui/                button, text field, submit button, form error
+    setup-banner.tsx   preview-mode notice, dev only
+    wordmark.tsx       the product name, set plainly
   lib/
-    env.ts             environment variables, validated with a useful error
+    env.ts             env vars + preview-mode detection
     validation.ts      shared form validation
     supabase/
       client.ts        browser client
