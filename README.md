@@ -33,9 +33,9 @@ gives each new auth user a profile.
 
 **3. Point auth at the app.** In Supabase → Authentication → URL Configuration:
 
-- Site URL: `http://localhost:3000`
-- Redirect URLs: add `http://localhost:3000/auth/confirm` and
-  `http://localhost:3000/auth/callback`
+- Site URL: `http://localhost:2000`
+- Redirect URLs: add `http://localhost:2000/auth/confirm` and
+  `http://localhost:2000/auth/callback`
 
 **4. Set your environment.**
 
@@ -53,7 +53,17 @@ npm install
 npm run dev
 ```
 
-Open [localhost:3000](http://localhost:3000).
+Open [localhost:2000](http://localhost:2000).
+
+> **Why 2000 and not 3000?** Port 3000 is where every other JS project in the
+> world also lives, which means stale service workers and half-forgotten dev
+> servers from old projects. A dedicated port gives this app its own browser
+> origin and a clean slate. It's set in the `dev` and `start` scripts — change
+> the `-p` flag there if you want something else, and update
+> `NEXT_PUBLIC_SITE_URL` plus the Supabase redirect URLs to match.
+>
+> Note that `PORT` cannot be set in `.env` — the HTTP server boots before env
+> files are read.
 
 > If email confirmation is on (the Supabase default), signing up sends you to
 > `/check-email` instead of straight into the app. To skip that while building,
