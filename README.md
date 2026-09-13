@@ -95,9 +95,9 @@ disappears and auth works.
 Preview mode engages **only** when `NODE_ENV` is `development` and the Supabase
 keys are absent. It is not a fallback that can follow you to production:
 
-- `next build` **refuses to run** in production without both keys (see
-  `next.config.ts`), so a missing variable fails the deploy rather than 500ing
-  on first request.
+- `npm run build` **refuses to run** without both keys (see
+  `scripts/check-build-env.mjs`), so a missing variable fails the deploy rather
+  than 500ing on first request.
 - In preview mode the proxy skips session handling, the pages that read a
   session use a placeholder, and both auth actions return a message naming the
   missing variables.
@@ -169,6 +169,8 @@ src/
 tests/
   unit/                vitest
   e2e/                 playwright
+scripts/
+  check-build-env.mjs  refuses a production build with no Supabase keys
 supabase/migrations/   SQL, run in order
 ```
 

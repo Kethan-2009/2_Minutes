@@ -24,9 +24,14 @@ export default defineConfig({
   forbidOnly: Boolean(process.env.CI),
   retries: process.env.CI ? 1 : 0,
   reporter: process.env.CI ? "list" : [["list"], ["html", { open: "never" }]],
+  // The dev server compiles routes lazily, so the first hit on a cold route can
+  // take several seconds. The default 5s assertion timeout makes that look like
+  // a failure on a fresh checkout — which is exactly how CI always runs.
+  expect: { timeout: 10_000 },
   use: {
     baseURL,
     trace: "on-first-retry",
+    navigationTimeout: 30_000,
   },
   projects: [
     {
