@@ -94,7 +94,7 @@ export async function createGoal(
       }
     }
 
-    return { success: true };
+    redirect("/dashboard");
   } catch (err) {
     return {
       error:
