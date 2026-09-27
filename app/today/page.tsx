@@ -82,9 +82,16 @@ export default async function Today() {
                 {daysLeft} day{daysLeft !== 1 ? "s" : ""}
               </p>
             </div>
-            <p className="text-xs text-muted">
-              {checkedInToday ? "✓ Checked in today" : "No check-in yet"}
-            </p>
+            <div className="text-right">
+              <p className="text-xs text-muted mb-2">
+                {checkedInToday ? "✓ Checked in today" : "No check-in yet"}
+              </p>
+              <Link href={`/pivot/${goal.id}`}>
+                <p className="text-xs text-accent hover:opacity-70 cursor-pointer">
+                  Change goal
+                </p>
+              </Link>
+            </div>
           </div>
         </div>
 
