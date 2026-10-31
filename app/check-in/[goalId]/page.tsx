@@ -3,64 +3,60 @@
 import { submitCheckIn, CheckInFormState } from "../actions";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
-import { useActionState, useState } from "react";
-import { useParams, useRouter } from "next/navigation";
+import { useActionState } from "react";
+import { useParams } from "next/navigation";
+import Link from "next/link";
 
 export default function CheckIn() {
   const params = useParams();
-  const router = useRouter();
   const goalId = params.goalId as string;
 
-  const [showResponse, setShowResponse] = useState(false);
+  // Bind goalId into the action so useActionState owns the result. The previous
+  // version called the action directly, so aiResponse never reached the view.
   const [state, formAction, isPending] = useActionState<
     CheckInFormState,
     FormData
-  >(async (prevState, formData) => {
-    return submitCheckIn(goalId, prevState, formData);
-  }, {});
+  >(
+    (prevState, formData) => submitCheckIn(goalId, prevState, formData),
+    {}
+  );
 
-  const handleSubmit = async (formData: FormData) => {
-    const result = await submitCheckIn(goalId, {}, formData);
-    if (result.success) {
-      setShowResponse(true);
-    }
-  };
-
-  if (showResponse && state.aiResponse) {
+  if (state.success && state.aiResponse) {
     return (
-      <div className="space-y-6 py-12">
-        <div className="text-center">
-          <p className="text-muted mb-4">Here's what I think:</p>
-          <div className="p-6 bg-line rounded text-center">
-            <p className="text-lg italic text-ink">{state.aiResponse}</p>
-          </div>
-        </div>
-        <div className="flex gap-3">
-          <Button variant="ghost" className="flex-1" onClick={() => router.push("/today")}>
-            Back to goal
-          </Button>
-          <Button className="flex-1" onClick={() => router.push("/today")}>
-            See you tomorrow
-          </Button>
-        </div>
+      <div className="py-6">
+        <p className="mb-8 text-sm text-muted">Logged for today.</p>
+
+        <blockquote className="mb-12 border-l-2 border-ink pl-6">
+          <p className="font-display text-2xl leading-snug text-ink">
+            {state.aiResponse}
+          </p>
+        </blockquote>
+
+        <Link
+          href="/today"
+          className="inline-flex items-center rounded-[2px] bg-ink px-7 py-3.5 text-lg font-medium text-paper no-underline transition-colors hover:bg-kept"
+        >
+          Back to the goal
+        </Link>
       </div>
     );
   }
 
   return (
-    <div className="space-y-8 py-12">
-      <div>
-        <h1 className="text-3xl font-bold mb-2">Two minutes</h1>
-        <p className="text-muted">
-          What happened today? Be honest.
-        </p>
-      </div>
+    <div className="py-6">
+      <h1 className="mb-3 font-display text-title font-medium text-ink">
+        Two minutes.
+      </h1>
+      <p className="mb-14 text-lg text-muted">
+        Say what actually happened. The vague version is the one you'll regret
+        reading back.
+      </p>
 
-      <form action={handleSubmit} className="space-y-4">
+      <form action={formAction} className="space-y-12">
         <Textarea
           name="whatDidYouDo"
           label="What did you do?"
-          placeholder="e.g., Worked on auth feature for 2 hours"
+          placeholder="Wrote the second body paragraph, about 40 minutes"
           rows={3}
           disabled={isPending}
           required
@@ -68,39 +64,36 @@ export default function CheckIn() {
 
         <Textarea
           name="whatDidYouSkip"
-          label="What did you skip? (optional)"
-          placeholder="e.g., Didn't write tests like planned"
-          rows={3}
+          label="What did you skip?"
+          placeholder="Didn't go back and cut the intro like I said I would"
+          rows={2}
           disabled={isPending}
         />
 
         <Textarea
           name="why"
-          label="Why? (optional)"
-          placeholder="e.g., Ran out of time, lost focus, something urgent came up"
-          rows={3}
+          label="Why?"
+          placeholder="Lost the evening to robotics, then didn't want to start"
+          rows={2}
           disabled={isPending}
         />
 
         {state.error && (
-          <div className="p-3 bg-red-100 border border-red-300 rounded text-red-900 text-sm">
+          <p role="alert" className="border-l-2 border-gone pl-4 text-sm text-gone">
             {state.error}
-          </div>
+          </p>
         )}
 
-        <div className="flex gap-3">
-          <Button
-            type="button"
-            variant="ghost"
-            className="flex-1"
-            onClick={() => router.push("/today")}
-            disabled={isPending}
+        <div className="flex items-center gap-6">
+          <Button type="submit" size="lg" disabled={isPending}>
+            {isPending ? "Reading it…" : "Send it"}
+          </Button>
+          <Link
+            href="/today"
+            className="text-muted underline decoration-rule underline-offset-4 transition-colors hover:text-ink hover:decoration-ink"
           >
-            Never mind
-          </Button>
-          <Button type="submit" className="flex-1" disabled={isPending}>
-            {isPending ? "Thinking..." : "Send"}
-          </Button>
+            Not now
+          </Link>
         </div>
       </form>
     </div>

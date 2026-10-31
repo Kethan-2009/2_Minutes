@@ -1,65 +1,107 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+@import "tailwindcss";
+
+/* ---------------------------------------------------------------
+   Two Minutes — a ledger of kept and broken promises.
+   Palette derives from accounting ledgers: green for entries kept,
+   red for what's gone, on pale ledger paper.
+   --------------------------------------------------------------- */
 
 :root {
-  --canvas: #ffffff;
-  --ink: #000000;
-  --muted: #999999;
-  --line: #e6e6e6;
-  --accent: #0066ff;
+  --paper: #f2f4f0;
+  --raised: #e9ece6;
+  --ink: #11201c;
+  --muted: #65756d;
+  --rule: #d5dcd3;
+  --kept: #1f6f4a;
+  --gone: #8c2f28;
+  --shadow: 17 32 28;
 }
 
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
-    --canvas: #1a1a1a;
-    --ink: #ffffff;
-    --muted: #666666;
-    --line: #333333;
-    --accent: #0066ff;
+    --paper: #0f1a17;
+    --raised: #16241f;
+    --ink: #eef2ea;
+    --muted: #8a9c92;
+    --rule: #26382f;
+    --kept: #4fae7c;
+    --gone: #d2685c;
+    --shadow: 0 0 0;
   }
 }
 
 :root[data-theme="dark"] {
-  --canvas: #1a1a1a;
-  --ink: #ffffff;
-  --muted: #666666;
-  --line: #333333;
-  --accent: #0066ff;
+  --paper: #0f1a17;
+  --raised: #16241f;
+  --ink: #eef2ea;
+  --muted: #8a9c92;
+  --rule: #26382f;
+  --kept: #4fae7c;
+  --gone: #d2685c;
+  --shadow: 0 0 0;
 }
 
-* {
-  margin: 0;
-  padding: 0;
-  box-sizing: border-box;
+@theme inline {
+  --color-paper: var(--paper);
+  --color-raised: var(--raised);
+  --color-ink: var(--ink);
+  --color-muted: var(--muted);
+  --color-rule: var(--rule);
+  --color-kept: var(--kept);
+  --color-gone: var(--gone);
+
+  --font-display: "Newsreader", "Iowan Old Style", "Palatino Linotype", Palatino, Georgia, serif;
+  --font-sans: "Archivo", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", sans-serif;
+
+  --text-display: 4rem;
+  --text-display--line-height: 0.95;
+  --text-display--letter-spacing: -0.03em;
+  --text-title: 2.25rem;
+  --text-title--line-height: 1.08;
+  --text-title--letter-spacing: -0.02em;
 }
 
-html,
-body {
-  height: 100%;
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+@layer base {
+  html {
+    -webkit-text-size-adjust: 100%;
+  }
+
+  body {
+    min-height: 100%;
+    background-color: var(--paper);
+    color: var(--ink);
+    font-family: var(--font-sans);
+    line-height: 1.55;
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+  }
 }
 
-body {
-  background-color: var(--canvas);
-  color: var(--ink);
+/* Numerals line up in the ledger and the countdown. */
+.tnum {
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: "tnum" 1;
 }
 
-a {
-  color: var(--accent);
-  text-decoration: none;
+@layer base {
+  :focus-visible {
+    outline: 2px solid var(--ink);
+    outline-offset: 3px;
+    border-radius: 2px;
+  }
+
+  ::selection {
+    background: var(--ink);
+    color: var(--paper);
+  }
 }
 
-a:hover {
-  opacity: 0.8;
-}
-
-button {
-  font-family: inherit;
-  cursor: pointer;
-}
-
-input,
-textarea {
-  font-family: inherit;
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
 }

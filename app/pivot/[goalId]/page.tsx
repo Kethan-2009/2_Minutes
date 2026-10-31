@@ -4,81 +4,80 @@ import { requestPivot, PivotFormState } from "../actions";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { useActionState, useState } from "react";
-import { useParams, useRouter } from "next/navigation";
+import { useActionState } from "react";
+import { useParams } from "next/navigation";
+import Link from "next/link";
 
 export default function Pivot() {
   const params = useParams();
-  const router = useRouter();
   const goalId = params.goalId as string;
 
-  const [showResult, setShowResult] = useState(false);
+  // Same fix as the check-in page: let useActionState own the result so the
+  // decision actually reaches the view.
   const [state, formAction, isPending] = useActionState<
     PivotFormState,
     FormData
-  >(async (prevState, formData) => {
-    return requestPivot(goalId, prevState, formData);
-  }, {});
+  >((prevState, formData) => requestPivot(goalId, prevState, formData), {});
 
-  const handleSubmit = async (formData: FormData) => {
-    const result = await requestPivot(goalId, {}, formData);
-    if (result.success) {
-      setShowResult(true);
-    }
-  };
-
-  if (showResult && state.decision) {
+  if (state.success && state.decision) {
+    const approved = state.decision === "approved";
     return (
-      <div className="space-y-6 py-12">
-        <div>
-          <h1 className="text-3xl font-bold mb-2">
-            {state.decision === "approved" ? "Approved" : "Not yet"}
-          </h1>
-          <p className="text-muted">{state.reasoning}</p>
-        </div>
+      <div className="py-6">
+        <h1
+          className={`mb-6 font-display text-title font-medium ${
+            approved ? "text-ink" : "text-gone"
+          }`}
+        >
+          {approved ? "Changed." : "Not this time."}
+        </h1>
 
-        <div className="space-y-2">
-          {state.decision === "rejected" && (
-            <p className="text-sm text-muted">
-              Keep pushing. Sometimes the best thing you can do is stick with it.
-            </p>
-          )}
-          {state.decision === "approved" && (
-            <p className="text-sm text-muted">
-              Your goal has been updated. Go make this new one count.
-            </p>
-          )}
-        </div>
+        <blockquote
+          className={`mb-10 border-l-2 pl-6 ${
+            approved ? "border-kept" : "border-gone"
+          }`}
+        >
+          <p className="text-lg leading-relaxed text-ink">{state.reasoning}</p>
+        </blockquote>
 
-        <Button className="w-full" onClick={() => router.push("/today")}>
-          Back to goal
-        </Button>
+        <p className="mb-12 max-w-[50ch] text-muted">
+          {approved
+            ? "The new goal is live and the clock restarts on it."
+            : "The original goal stands. You can ask again once something has actually changed."}
+        </p>
+
+        <Link
+          href="/today"
+          className="inline-flex items-center rounded-[2px] bg-ink px-7 py-3.5 text-lg font-medium text-paper no-underline transition-colors hover:bg-kept"
+        >
+          Back to the goal
+        </Link>
       </div>
     );
   }
 
   return (
-    <div className="space-y-8 py-12">
-      <div>
-        <h1 className="text-3xl font-bold mb-2">Change your goal?</h1>
-        <p className="text-muted mb-4">
-          You'll need to justify it. Convince me this is real.
-        </p>
-      </div>
+    <div className="py-6">
+      <h1 className="mb-4 font-display text-title font-medium text-ink">
+        Changing the goal.
+      </h1>
+      <p className="mb-14 max-w-[52ch] text-lg text-muted">
+        Wanting out and outgrowing something look identical from the inside.
+        Give three reasons, and the AI decides which one this is.
+      </p>
 
-      <form action={handleSubmit} className="space-y-4">
+      <form action={formAction} className="space-y-12">
         <Input
           name="newGoal"
-          label="New goal"
-          placeholder="What do you want to do instead?"
+          label="What you'd do instead"
+          placeholder="Finish the NC State supplemental essays"
           disabled={isPending}
           required
         />
 
         <Textarea
           name="reason1"
-          label="Reason 1"
-          placeholder="e.g., Life circumstances changed, original goal no longer relevant"
+          label="First reason"
+          placeholder="The deadline for this moved up and it now matters more"
           rows={2}
           disabled={isPending}
           required
@@ -86,8 +85,8 @@ export default function Pivot() {
 
         <Textarea
           name="reason2"
-          label="Reason 2"
-          placeholder="e.g., Discovered a more important priority"
+          label="Second reason"
+          placeholder="The original goal was a means to this one anyway"
           rows={2}
           disabled={isPending}
           required
@@ -95,32 +94,29 @@ export default function Pivot() {
 
         <Textarea
           name="reason3"
-          label="Reason 3"
-          placeholder="e.g., Original goal is no longer achievable given constraints"
+          label="Third reason"
+          placeholder="I can still come back to the first one in December"
           rows={2}
           disabled={isPending}
           required
         />
 
         {state.error && (
-          <div className="p-3 bg-red-100 border border-red-300 rounded text-red-900 text-sm">
+          <p role="alert" className="border-l-2 border-gone pl-4 text-sm text-gone">
             {state.error}
-          </div>
+          </p>
         )}
 
-        <div className="flex gap-3">
-          <Button
-            type="button"
-            variant="ghost"
-            className="flex-1"
-            onClick={() => router.push("/today")}
-            disabled={isPending}
+        <div className="flex items-center gap-6">
+          <Button type="submit" size="lg" disabled={isPending}>
+            {isPending ? "Weighing it…" : "Make the case"}
+          </Button>
+          <Link
+            href="/today"
+            className="text-muted underline decoration-rule underline-offset-4 transition-colors hover:text-ink hover:decoration-ink"
           >
-            Never mind
-          </Button>
-          <Button type="submit" className="flex-1" disabled={isPending}>
-            {isPending ? "Thinking..." : "Request change"}
-          </Button>
+            Keep the goal
+          </Link>
         </div>
       </form>
     </div>

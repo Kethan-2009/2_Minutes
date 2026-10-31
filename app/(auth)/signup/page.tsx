@@ -14,13 +14,18 @@ export default function SignUp() {
   );
 
   return (
-    <div className="space-y-6">
-      <form action={formAction} className="space-y-4">
+    <div>
+      <h1 className="mb-10 font-display text-title font-medium text-ink">
+        Name one thing you'll finish.
+      </h1>
+
+      <form action={formAction} className="space-y-8">
         <Input
           name="email"
           type="email"
-          placeholder="your@email.com"
+          placeholder="you@email.com"
           label="Email"
+          autoComplete="email"
           required
           disabled={isPending}
         />
@@ -29,7 +34,8 @@ export default function SignUp() {
           name="password"
           type="password"
           placeholder="••••••••"
-          label="Password (at least 8 characters)"
+          label="Password, at least 8 characters"
+          autoComplete="new-password"
           required
           disabled={isPending}
         />
@@ -38,32 +44,36 @@ export default function SignUp() {
           name="confirmPassword"
           type="password"
           placeholder="••••••••"
-          label="Confirm Password"
+          label="Password again"
+          autoComplete="new-password"
           required
           disabled={isPending}
         />
 
         {state.error && (
-          <div className="p-3 bg-red-100 border border-red-300 rounded text-red-900 text-sm">
+          <p role="alert" className="border-l-2 border-gone pl-4 text-sm text-gone">
             {state.error}
-          </div>
+          </p>
         )}
 
         {state.success && (
-          <div className="p-3 bg-green-100 border border-green-300 rounded text-green-900 text-sm">
-            Check your email to confirm your account.
-          </div>
+          <p className="border-l-2 border-kept pl-4 text-sm text-ink">
+            Check your email to confirm the account.
+          </p>
         )}
 
-        <Button type="submit" disabled={isPending} className="w-full">
-          {isPending ? "Creating account..." : "Sign up"}
+        <Button type="submit" disabled={isPending} size="lg" className="w-full">
+          {isPending ? "Creating account…" : "Create account"}
         </Button>
       </form>
 
-      <p className="text-center text-sm text-muted">
+      <p className="mt-10 text-sm text-muted">
         Already have an account?{" "}
-        <Link href="/login" className="text-accent font-medium hover:opacity-80">
-          Log in
+        <Link
+          href="/login"
+          className="text-ink underline decoration-rule underline-offset-4 hover:decoration-ink"
+        >
+          Sign in
         </Link>
       </p>
     </div>

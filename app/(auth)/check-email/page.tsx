@@ -1,17 +1,22 @@
+import Link from "next/link";
+
 export default function CheckEmail() {
   return (
-    <div className="space-y-6 text-center">
-      <div>
-        <h2 className="text-2xl font-bold mb-2">Check your email</h2>
-        <p className="text-muted">
-          We've sent you a confirmation link. Click it to activate your account.
-        </p>
-      </div>
+    <div>
+      <h1 className="mb-6 font-display text-title font-medium text-ink">
+        Check your email.
+      </h1>
+      <p className="mb-10 text-lg leading-relaxed text-muted">
+        There's a confirmation link waiting. Open it and you're in.
+      </p>
       <p className="text-sm text-muted">
-        Don't see it? Check your spam folder or{" "}
-        <a href="/signup" className="text-accent font-medium hover:opacity-80">
-          try again
-        </a>
+        Nothing there? Look in spam, or{" "}
+        <Link
+          href="/signup"
+          className="text-ink underline decoration-rule underline-offset-4 hover:decoration-ink"
+        >
+          sign up again
+        </Link>
         .
       </p>
     </div>

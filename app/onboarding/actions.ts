@@ -15,33 +15,54 @@ export async function createGoal(
   prevState: GoalFormState,
   formData: FormData
 ): Promise<GoalFormState> {
+  // NOTE: redirect() throws NEXT_REDIRECT internally. Keep it outside the
+  // try/catch below, or the catch swallows it and the form silently stalls.
+  let created = false;
+
   try {
     const user = await requireAuth();
     const supabase = await createClient();
 
-    const title = formData.get("title")?.toString() || "";
+    const title = formData.get("title")?.toString().trim() || "";
     const goalType = formData.get("goalType")?.toString() || "long_term";
     const deadline = formData.get("deadline")?.toString() || "";
 
-    // Validate inputs
     if (!validateGoalTitle(title)) {
-      return { error: "Goal title must be 1-100 characters" };
+      return { error: "Give the goal a title between 1 and 100 characters." };
     }
 
     if (!deadline) {
-      return { error: "Deadline is required" };
+      return { error: "Pick a deadline." };
     }
 
-    const deadlineDate = new Date(deadline);
+    const deadlineDate = new Date(`${deadline}T23:59:59`);
+    if (Number.isNaN(deadlineDate.getTime())) {
+      return { error: "That deadline isn't a valid date." };
+    }
     if (deadlineDate <= new Date()) {
-      return { error: "Deadline must be in the future" };
+      return { error: "The deadline has to be in the future." };
     }
 
     if (!["short_term", "long_term"].includes(goalType)) {
-      return { error: "Invalid goal type" };
+      return { error: "Pick a goal type." };
     }
 
-    // Create the goal
+    // One active goal at a time. Re-running onboarding replaces the old one
+    // rather than stacking duplicates (the cause of the 5 identical rows).
+    const { data: existing } = await supabase
+      .from("goals")
+      .select("id")
+      .eq("user_id", user.id)
+      .eq("status", "active");
+
+    if (existing && existing.length > 0) {
+      await supabase
+        .from("goals")
+        .update({ status: "abandoned" })
+        .eq("user_id", user.id)
+        .eq("status", "active");
+    }
+
     const { data: goal, error: goalError } = await supabase
       .from("goals")
       .insert({
@@ -55,10 +76,9 @@ export async function createGoal(
       .single();
 
     if (goalError || !goal) {
-      return { error: "Failed to create goal. Please try again." };
+      return { error: "Couldn't save the goal. Try again." };
     }
 
-    // If long-term goal, create the initial commitments
     if (goalType === "long_term") {
       const commitmentArray: Array<{
         goal_id: string;
@@ -67,13 +87,13 @@ export async function createGoal(
         week_starting: string;
       }> = [];
 
-      for (let i = 1; i <= 3; i++) {
-        const commitment = formData.get(`commitment${i}`)?.toString() || "";
-        if (commitment && validateCommitment(commitment)) {
-          const weekStarting = new Date();
-          weekStarting.setDate(weekStarting.getDate() - weekStarting.getDay());
-          weekStarting.setHours(0, 0, 0, 0);
+      const weekStarting = new Date();
+      weekStarting.setDate(weekStarting.getDate() - weekStarting.getDay());
+      weekStarting.setHours(0, 0, 0, 0);
 
+      for (let i = 1; i <= 3; i++) {
+        const commitment = formData.get(`commitment${i}`)?.toString().trim() || "";
+        if (commitment && validateCommitment(commitment)) {
           commitmentArray.push({
             goal_id: goal.id,
             user_id: user.id,
@@ -89,16 +109,21 @@ export async function createGoal(
           .insert(commitmentArray);
 
         if (commitmentError) {
-          return { error: "Created goal but failed to save commitments." };
+          return { error: "Saved the goal, but the weekly commitments didn't save." };
         }
       }
     }
 
-    redirect("/dashboard");
+    created = true;
   } catch (err) {
     return {
-      error:
-        err instanceof Error ? err.message : "An unexpected error occurred",
+      error: err instanceof Error ? err.message : "Something went wrong. Try again.",
     };
   }
+
+  if (created) {
+    redirect("/today");
+  }
+
+  return { error: "Something went wrong. Try again." };
 }

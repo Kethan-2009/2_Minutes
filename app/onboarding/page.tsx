@@ -8,6 +8,8 @@ import { useActionState, useState } from "react";
 
 type Step = "type" | "title" | "deadline" | "commitments" | "review";
 
+const STEPS: Step[] = ["type", "title", "deadline", "commitments", "review"];
+
 export default function Onboarding() {
   const [step, setStep] = useState<Step>("type");
   const [goalType, setGoalType] = useState<"short_term" | "long_term">(
@@ -21,269 +23,259 @@ export default function Onboarding() {
     FormData
   >(createGoal, {});
 
-  const handleNext = () => {
-    const steps: Step[] = ["type", "title", "deadline", "commitments", "review"];
-    const currentIndex = steps.indexOf(step);
-    if (currentIndex < steps.length - 1) {
-      setStep(steps[currentIndex + 1]);
-    }
-  };
-
-  const handlePrev = () => {
-    const steps: Step[] = ["type", "title", "deadline", "commitments", "review"];
-    const currentIndex = steps.indexOf(step);
-    if (currentIndex > 0) {
-      setStep(steps[currentIndex - 1]);
-    }
-  };
+  const index = STEPS.indexOf(step);
+  const next = () => index < STEPS.length - 1 && setStep(STEPS[index + 1]);
+  const prev = () => index > 0 && setStep(STEPS[index - 1]);
 
   const canProceed = () => {
-    if (step === "type") return true;
     if (step === "title") return title.trim().length > 0;
     if (step === "deadline") return deadline !== "";
-    if (step === "commitments") {
-      return (
-        goalType === "short_term" ||
-        commitments.filter((c) => c.trim().length > 0).length > 0
-      );
-    }
     return true;
   };
 
   const handleSubmit = (formData: FormData) => {
     formData.set("goalType", goalType);
-    formData.set("title", title);
+    formData.set("title", title.trim());
     formData.set("deadline", deadline);
-    commitments.forEach((c, i) => {
-      formData.set(`commitment${i + 1}`, c);
-    });
+    commitments.forEach((c, i) => formData.set(`commitment${i + 1}`, c.trim()));
     formAction(formData);
   };
 
+  const today = new Date().toISOString().split("T")[0];
+
   return (
-    <div className="space-y-8">
-      {/* Progress bar */}
-      <div className="bg-line rounded-full h-2 overflow-hidden">
-        <div
-          className="bg-accent h-full transition-all duration-300"
-          style={{
-            width:
-              step === "type"
-                ? "20%"
-                : step === "title"
-                  ? "40%"
-                  : step === "deadline"
-                    ? "60%"
-                    : step === "commitments"
-                      ? "80%"
-                      : "100%",
-          }}
-        />
+    <div>
+      {/* Step marks: this really is a sequence, so the count is information. */}
+      <div className="mb-16 flex gap-2" aria-hidden="true">
+        {STEPS.map((s, i) => (
+          <span
+            key={s}
+            className={`h-[2px] flex-1 transition-colors duration-300 ${
+              i <= index ? "bg-ink" : "bg-rule"
+            }`}
+          />
+        ))}
       </div>
 
-      {/* Step: Choose goal type */}
       {step === "type" && (
-        <div className="space-y-6">
-          <div>
-            <h2 className="text-3xl font-bold mb-2">What's your goal?</h2>
-            <p className="text-muted">
-              Short-term goals are quick wins. Long-term goals are ongoing
-              commitments with weekly milestones.
-            </p>
-          </div>
+        <div>
+          <h1 className="mb-10 font-display text-title font-medium text-ink">
+            What kind of thing is this?
+          </h1>
 
-          <div className="space-y-3">
-            <label className="block p-4 border-2 rounded cursor-pointer transition-colors"
-              style={{
-                borderColor: goalType === "short_term" ? "var(--accent)" : "var(--line)",
-                backgroundColor:
-                  goalType === "short_term" ? "rgba(0, 102, 255, 0.05)" : "transparent",
-              }}
-            >
-              <input
-                type="radio"
-                value="short_term"
-                checked={goalType === "short_term"}
-                onChange={(e) => setGoalType(e.target.value as "short_term")}
-                className="mr-3"
-              />
-              <span className="font-medium">Short-term goal</span>
-              <p className="text-sm text-muted mt-1">
-                Finish something in the next few weeks (e.g., write an essay,
-                build a feature)
-              </p>
-            </label>
-
-            <label className="block p-4 border-2 rounded cursor-pointer transition-colors"
-              style={{
-                borderColor: goalType === "long_term" ? "var(--accent)" : "var(--line)",
-                backgroundColor:
-                  goalType === "long_term" ? "rgba(0, 102, 255, 0.05)" : "transparent",
-              }}
-            >
-              <input
-                type="radio"
-                value="long_term"
-                checked={goalType === "long_term"}
-                onChange={(e) => setGoalType(e.target.value as "long_term")}
-                className="mr-3"
-              />
-              <span className="font-medium">Long-term goal</span>
-              <p className="text-sm text-muted mt-1">
-                Build a skill over months with weekly commitments (e.g., learn
-                to code, write a novel)
-              </p>
-            </label>
+          <div className="space-y-px">
+            {(
+              [
+                {
+                  value: "short_term",
+                  name: "Something to finish",
+                  blurb:
+                    "One piece of work with an end: an essay, an application, a feature.",
+                },
+                {
+                  value: "long_term",
+                  name: "Something to keep doing",
+                  blurb:
+                    "A habit you're building over months, with a few things you repeat each week.",
+                },
+              ] as const
+            ).map((opt) => {
+              const active = goalType === opt.value;
+              return (
+                <label
+                  key={opt.value}
+                  className={`flex cursor-pointer gap-4 border-l-2 py-5 pl-5 transition-colors ${
+                    active
+                      ? "border-ink bg-raised"
+                      : "border-rule hover:border-muted"
+                  }`}
+                >
+                  <input
+                    type="radio"
+                    name="goalTypeChoice"
+                    value={opt.value}
+                    checked={active}
+                    onChange={() => setGoalType(opt.value)}
+                    className="sr-only"
+                  />
+                  <span>
+                    <span className="block text-lg text-ink">{opt.name}</span>
+                    <span className="mt-1 block max-w-[48ch] text-muted">
+                      {opt.blurb}
+                    </span>
+                  </span>
+                </label>
+              );
+            })}
           </div>
         </div>
       )}
 
-      {/* Step: Goal title */}
       {step === "title" && (
-        <div className="space-y-6">
-          <div>
-            <h2 className="text-3xl font-bold mb-2">What's the goal?</h2>
-            <p className="text-muted">Be specific. "Learn React" not "get better at coding."</p>
-          </div>
+        <div>
+          <h1 className="mb-4 font-display text-title font-medium text-ink">
+            What are you finishing?
+          </h1>
+          <p className="mb-12 max-w-[50ch] text-muted">
+            Write it so that in six weeks you can tell, without arguing with
+            yourself, whether you did it.
+          </p>
           <Input
-            label="Goal title"
+            name="titleField"
+            label="The goal"
             value={title}
             onChange={(e) => setTitle(e.target.value)}
-            placeholder="e.g., Learn React, Write 50k words, Run a 5K"
+            placeholder="Finish every section of my Common App essay"
             maxLength={100}
             autoFocus
           />
-          <p className="text-xs text-muted">{title.length}/100</p>
+          <p className="tnum mt-3 text-sm text-muted">
+            {title.length}/100
+          </p>
         </div>
       )}
 
-      {/* Step: Deadline */}
       {step === "deadline" && (
-        <div className="space-y-6">
-          <div>
-            <h2 className="text-3xl font-bold mb-2">When do you finish?</h2>
-            <p className="text-muted">Set a real deadline. The AI will hold you to it.</p>
-          </div>
+        <div>
+          <h1 className="mb-4 font-display text-title font-medium text-ink">
+            By when?
+          </h1>
+          <p className="mb-12 max-w-[50ch] text-muted">
+            Pick the real date, not the comfortable one. Everything after this
+            counts down to it.
+          </p>
           <Input
+            name="deadlineField"
             label="Deadline"
             type="date"
             value={deadline}
             onChange={(e) => setDeadline(e.target.value)}
-            min={new Date().toISOString().split("T")[0]}
+            min={today}
             autoFocus
           />
         </div>
       )}
 
-      {/* Step: Commitments (for long-term goals) */}
       {step === "commitments" && (
-        <div className="space-y-6">
-          <div>
-            <h2 className="text-3xl font-bold mb-2">Weekly commitments</h2>
-            <p className="text-muted">
-              {goalType === "short_term"
-                ? "You're all set. Short-term goals don't need weekly milestones."
-                : "What will you do each week to make progress? Be specific."}
-            </p>
-          </div>
+        <div>
+          <h1 className="mb-4 font-display text-title font-medium text-ink">
+            {goalType === "long_term" ? "What do you repeat?" : "That's the setup."}
+          </h1>
+          <p className="mb-12 max-w-[50ch] text-muted">
+            {goalType === "long_term"
+              ? "Name up to three things you'll do every week. These are what you get measured against."
+              : "Nothing weekly to set for a one-off. You'll check in daily until it's done."}
+          </p>
 
           {goalType === "long_term" && (
-            <div className="space-y-3">
-              {commitments.map((commitment, idx) => (
+            <div className="space-y-10">
+              {commitments.map((commitment, i) => (
                 <Textarea
-                  key={idx}
-                  label={`Commitment ${idx + 1}`}
+                  key={i}
+                  name={`commitmentField${i}`}
+                  label={`Weekly thing ${i + 1}${i > 0 ? " (optional)" : ""}`}
                   value={commitment}
                   onChange={(e) => {
-                    const newCommitments = [...commitments];
-                    newCommitments[idx] = e.target.value;
-                    setCommitments(newCommitments);
+                    const copy = [...commitments];
+                    copy[i] = e.target.value;
+                    setCommitments(copy);
                   }}
-                  placeholder="e.g., Build 1 small feature, Read 50 pages, Run 3x"
+                  placeholder={
+                    ["Draft 500 words", "Read 50 pages", "One mock exam"][i]
+                  }
                   maxLength={200}
                   rows={2}
                 />
               ))}
             </div>
           )}
-
-          {goalType === "short_term" && (
-            <div className="p-4 bg-line rounded">
-              <p className="text-sm text-muted">
-                You'll check in daily on your progress. The AI will keep you honest.
-              </p>
-            </div>
-          )}
         </div>
       )}
 
-      {/* Step: Review */}
       {step === "review" && (
-        <div className="space-y-6">
-          <div>
-            <h2 className="text-3xl font-bold mb-2">Let's go.</h2>
-            <p className="text-muted mb-6">Here's what you're committing to:</p>
-          </div>
+        <div>
+          <h1 className="mb-12 font-display text-title font-medium text-ink">
+            This is what you're committing to.
+          </h1>
 
-          <div className="space-y-4 p-4 bg-line rounded">
-            <div>
-              <p className="text-xs text-muted uppercase tracking-wide">Goal</p>
-              <p className="text-lg font-bold">{title}</p>
+          <dl className="mb-12 space-y-8">
+            <div className="border-b border-rule pb-8">
+              <dt className="mb-2 text-sm text-muted">The goal</dt>
+              <dd className="font-display text-2xl leading-snug text-ink">
+                {title}
+              </dd>
             </div>
-            <div>
-              <p className="text-xs text-muted uppercase tracking-wide">Deadline</p>
-              <p className="text-lg font-bold">
-                {new Date(deadline).toLocaleDateString("en-US", {
-                  month: "short",
-                  day: "numeric",
-                  year: "numeric",
-                })}
-              </p>
+            <div className="border-b border-rule pb-8">
+              <dt className="mb-2 text-sm text-muted">Deadline</dt>
+              <dd className="tnum text-2xl text-ink">
+                {deadline &&
+                  new Date(`${deadline}T00:00:00`).toLocaleDateString("en-US", {
+                    weekday: "long",
+                    month: "long",
+                    day: "numeric",
+                    year: "numeric",
+                  })}
+              </dd>
             </div>
             {goalType === "long_term" &&
-              commitments.filter((c) => c.trim().length > 0).length > 0 && (
-                <div>
-                  <p className="text-xs text-muted uppercase tracking-wide">Weekly</p>
-                  <ul className="space-y-1">
-                    {commitments
-                      .filter((c) => c.trim().length > 0)
-                      .map((c, idx) => (
-                        <li key={idx} className="text-sm text-ink">
-                          • {c}
-                        </li>
-                      ))}
-                  </ul>
+              commitments.some((c) => c.trim()) && (
+                <div className="border-b border-rule pb-8">
+                  <dt className="mb-3 text-sm text-muted">Every week</dt>
+                  <dd>
+                    <ul className="space-y-2">
+                      {commitments
+                        .filter((c) => c.trim())
+                        .map((c, i) => (
+                          <li key={i} className="text-lg text-ink">
+                            {c}
+                          </li>
+                        ))}
+                    </ul>
+                  </dd>
                 </div>
               )}
-          </div>
+          </dl>
 
           {state.error && (
-            <div className="p-3 bg-red-100 border border-red-300 rounded text-red-900 text-sm">
+            <p
+              role="alert"
+              className="mb-8 border-l-2 border-gone pl-4 text-sm text-gone"
+            >
               {state.error}
-            </div>
+            </p>
           )}
         </div>
       )}
 
-      {/* Navigation */}
-      <div className="flex gap-3 justify-between">
-        <Button
-          variant="ghost"
-          onClick={handlePrev}
-          disabled={step === "type" || isPending}
-        >
-          Back
-        </Button>
-
+      <div className="mt-16 flex items-center gap-6">
         {step !== "review" ? (
-          <Button onClick={handleNext} disabled={!canProceed() || isPending}>
-            Next
-          </Button>
-        ) : (
-          <form action={handleSubmit} className="flex-1">
-            <Button type="submit" className="w-full" disabled={isPending}>
-              {isPending ? "Creating goal..." : "Start"}
+          <>
+            <Button onClick={next} disabled={!canProceed()} size="lg">
+              Continue
             </Button>
+            {index > 0 && (
+              <button
+                type="button"
+                onClick={prev}
+                className="text-muted underline decoration-rule underline-offset-4 transition-colors hover:text-ink hover:decoration-ink"
+              >
+                Back
+              </button>
+            )}
+          </>
+        ) : (
+          <form action={handleSubmit} className="flex items-center gap-6">
+            <Button type="submit" size="lg" disabled={isPending}>
+              {isPending ? "Starting…" : "Start the clock"}
+            </Button>
+            <button
+              type="button"
+              onClick={prev}
+              disabled={isPending}
+              className="text-muted underline decoration-rule underline-offset-4 transition-colors hover:text-ink hover:decoration-ink disabled:opacity-40"
+            >
+              Back
+            </button>
           </form>
         )}
       </div>

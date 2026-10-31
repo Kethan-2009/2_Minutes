@@ -1,11 +1,7 @@
-export default function CheckInLayout({
-  children,
-}: {
-  children: React.ReactNode;
-}) {
+export default function Layout({ children }: { children: React.ReactNode }) {
   return (
-    <div className="min-h-screen bg-canvas text-ink p-4">
-      <div className="max-w-2xl mx-auto">{children}</div>
-    </div>
+    <main className="mx-auto min-h-screen w-full max-w-2xl px-6 py-10 sm:py-16">
+      {children}
+    </main>
   );
 }
